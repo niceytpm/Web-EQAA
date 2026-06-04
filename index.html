@@ -12,53 +12,74 @@
     box-sizing: border-box;
 }
 
-/* 1. จัดให้ Container หลักอยู่กึ่งกลางหน้าจอเสมอ */
 body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     background: #000000;
     margin: 0;
     padding: 16px;
     display: flex;
-    justify-content: center; /* จัดกึ่งกลางแนวนอน */
-    align-items: flex-start; /* เริ่มจากด้านบนเพื่อให้เหมาะกับ Slide Over */
+    justify-content: center; 
+    align-items: flex-start; 
     min-height: 100vh;
 }
 
-/* 2. ตัวกล่องแอปพลิเคชัน */
 .container {
     background: #1c1c1e;
     padding: 24px 20px;
     border-radius: 24px;
     width: 100%;
-    max-width: 360px; /* คุมขนาดไม่ให้กว้างเกินไปเมื่อขยายหน้าต่าง */
+    max-width: 360px; 
     box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-    
-    /* จัดสิ่งของภายในกล่องให้อยู่กึ่งกลางแนวดิ่ง */
     display: flex;
     flex-direction: column;
     align-items: center; 
+    position: relative; /* เพื่อให้ปุ่ม + อยู่มุมขวาบนของกล่องได้ */
 }
 
-/* 3. หัวข้อ */
+/* หัวข้อและปุ่มบวก */
+.header-area {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    margin-bottom: 20px;
+    position: relative;
+}
+
 .header-title {
     color: #ffffff;
     font-size: 20px;
     font-weight: 600;
-    margin-bottom: 20px;
     display: flex;
     align-items: center;
     gap: 6px;
     text-align: center;
 }
 
-/* 4. โซนกรอกข้อมูล (จัดให้อยู่กึ่งกลางและกว้างพอดี) */
+.btn-add {
+    position: absolute;
+    right: 0;
+    background: #2f80ed;
+    color: white;
+    border: none;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* โซนกรอกข้อมูล (เอาปุ่มวางออกแล้ว) */
 .search-row {
     display: flex;
-    gap: 12px;
     margin-bottom: 16px;
     align-items: center;
     width: 100%;
-    border-bottom: 1px solid #2c2c2e; /* เพิ่มเส้นใต้บางๆ ให้ดูเป็นระเบียบ */
+    border-bottom: 1px solid #2c2c2e; 
     padding-bottom: 8px;
 }
 
@@ -70,25 +91,14 @@ input {
     font-size: 18px;
     outline: none;
     width: 100%;
+    text-align: center; /* จัดตัวอักษรที่พิมพ์ให้อยู่ตรงกลางเพื่อความสวยงาม */
 }
 
 input::placeholder {
     color: #55555c;
 }
 
-.btn-paste {
-    background: #34c759;
-    color: #ffffff;
-    border: none;
-    border-radius: 10px;
-    padding: 6px 12px;
-    font-size: 15px;
-    font-weight: 500;
-    cursor: pointer;
-    white-space: nowrap;
-}
-
-/* 5. ปุ่มค้นหา */
+/* ปุ่มค้นหา */
 .btn-search {
     width: 100%;
     background: #2f80ed;
@@ -110,11 +120,11 @@ input::placeholder {
     margin-bottom: 10px;
 }
 
-/* 6. ส่วนของผลลัพธ์ (ทุกอย่างในนี้จะถูกจัดกึ่งกลางทั้งหมด) */
+/* ส่วนของผลลัพธ์ */
 .result-box {
     display: flex;
     flex-direction: column;
-    align-items: center; /* จัดกึ่งกลางองค์ประกอบภายในทั้งหมด */
+    align-items: center; 
     justify-content: center;
     gap: 12px;
     width: 100%;
@@ -122,9 +132,9 @@ input::placeholder {
 
 .tags-inline {
     display: flex;
-    justify-content: center; /* จัดแท็กให้อยู่กึ่งกลางแนวนอน */
+    justify-content: center; 
     gap: 8px;
-    flex-wrap: wrap; /* ถ้าหน้าต่างแคบเกินไป แท็กจะตกลงมาตรงกลางพอดียังไม่หลุดขอบ */
+    flex-wrap: wrap; 
     width: 100%;
 }
 
@@ -159,16 +169,99 @@ input::placeholder {
     background: #2c2c2e;
     margin-top: 15px;
 }
+
+/* ---- หน้าต่างป็อปอัพ (Modal) สำหรับอัปโหลด GitHub ---- */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    padding: 16px;
+}
+
+.modal-content {
+    background: #1c1c1e;
+    padding: 20px;
+    border-radius: 20px;
+    width: 100%;
+    max-width: 320px;
+    border: 1px solid #2c2c2e;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.modal-title {
+    color: white;
+    font-size: 16px;
+    font-weight: 600;
+    text-align: center;
+    margin-bottom: 5px;
+}
+
+.modal-input {
+    background: #2c2c2e;
+    border: 1px solid #3a3a3c;
+    border-radius: 8px;
+    padding: 10px;
+    color: white;
+    font-size: 14px;
+    width: 100%;
+    text-align: left;
+}
+
+.modal-file-label {
+    background: #242426;
+    color: #2f80ed;
+    border: 1px dashed #2f80ed;
+    padding: 10px;
+    border-radius: 8px;
+    text-align: center;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 5px;
+}
+
+.btn-cancel {
+    flex: 1;
+    background: #3a3a3c;
+    color: white;
+    border: none;
+    padding: 10px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.btn-upload {
+    flex: 1;
+    background: #34c759;
+    color: white;
+    border: none;
+    padding: 10px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+}
 </style>
 </head>
 <body>
 
 <div class="container">
-    <div class="header-title">🔍 ค้นหา ID MACHINE</div>
+    <div class="header-area">
+        <div class="header-title">🔍 ค้นหา ID MACHINE</div>
+        <button class="btn-add" onclick="openModal()">+</button>
+    </div>
 
     <div class="search-row">
-        <input id="machineCode" placeholder="EYHJE2400018">
-        <button class="btn-paste" onclick="pasteFromClipboard()">วาง</button>
+        <input id="machineCode" placeholder="EYHJE2400018" enterkeyhint="search" onkeydown="if(event.key === 'Enter') search()">
     </div>
     
     <button class="btn-search" onclick="search()">ค้นหา</button>
@@ -178,10 +271,32 @@ input::placeholder {
     <div id="result" style="width: 100%;"></div>
 </div>
 
+<div class="modal-overlay" id="uploadModal">
+    <div class="modal-content">
+        <div class="modal-title">⚙️ GitHub อัปโหลดข้อมูล</div>
+        <input type="text" id="ghUser" class="modal-input" placeholder="GitHub Username">
+        <input type="text" id="ghRepo" class="modal-input" placeholder="Repository Name">
+        <input type="password" id="ghToken" class="modal-input" placeholder="GitHub Personal Access Token">
+        <input type="text" id="ghPath" class="modal-input" placeholder="ชื่อไฟล์ปลายทาง (เช่น data.xlsx)" value="data.xlsx">
+        
+        <label class="modal-file-label">
+            📁 เลือกไฟล์ data.xlsx จากเครื่อง
+            <input type="file" id="excelFile" accept=".xlsx" style="display: none;" onchange="updateFileLabel(this)">
+        </label>
+        <div id="fileNameDisplay" style="color: #8e8e93; font-size: 12px; text-align: center; margin-top: -5px;">ยังไม่ได้เลือกไฟล์</div>
+
+        <div class="modal-actions">
+            <button class="btn-cancel" onclick="closeModal()">ยกเลิก</button>
+            <button class="btn-upload" onclick="uploadToGitHub()">อัปโหลด</button>
+        </div>
+        <div id="modalStatus" style="font-size: 12px; text-align: center; color: #ff453a;"></div>
+    </div>
+</div>
+
 <script>
 let data = [];
 
-// ดึงไฟล์ Excel
+// ดึงไฟล์ Excel มาใช้งานในระบบตอนเริ่มต้น
 fetch("data.xlsx")
 .then(r => r.arrayBuffer())
 .then(b => {
@@ -198,15 +313,7 @@ function clean(v) {
     return String(v || "").replace(/[\s\u00A0]+/g, "").toUpperCase();
 }
 
-async function pasteFromClipboard() {
-    try {
-        const text = await navigator.clipboard.readText();
-        document.getElementById("machineCode").value = text;
-    } catch (err) {
-        document.getElementById("status").innerText = "⚠️ เข้าถึงคลิปบอร์ดไม่ได้";
-    }
-}
-
+/* ฟังก์ชันค้นหา */
 function search() {
     const key = clean(document.getElementById("machineCode").value);
     const resultDiv = document.getElementById("result");
@@ -214,6 +321,9 @@ function search() {
 
     resultDiv.innerHTML = "";
     status.innerText = "";
+
+    // ปิดคีย์บอร์ดบน iPad หลังกดค้นหา
+    document.getElementById("machineCode").blur();
 
     const found = data.filter(r => clean(r[0]).includes(key));
 
@@ -241,6 +351,103 @@ function search() {
             <div class="bottom-line"></div>
         </div>
     `;
+}
+
+/* ส่วนจัดการควบคุมหน้าต่างแอดมิน (Modal) */
+function openModal() {
+    document.getElementById("uploadModal").style.display = "flex";
+    document.getElementById("modalStatus").innerText = "";
+}
+
+function closeModal() {
+    document.getElementById("uploadModal").style.display = "none";
+}
+
+function updateFileLabel(input) {
+    const label = document.getElementById("fileNameDisplay");
+    if (input.files.length > 0) {
+        label.innerText = "เลือกไฟล์แล้ว: " + input.files[0].name;
+        label.style.color = "#34c759";
+    } else {
+        label.innerText = "ยังไม่ได้เลือกไฟล์";
+        label.style.color = "#8e8e93";
+    }
+}
+
+/* ฟังก์ชันส่งไฟล์ขึ้น GitHub API ด้วย Base64 Encoding */
+async function uploadToGitHub() {
+    const user = document.getElementById("ghUser").value.trim();
+    const repo = document.getElementById("ghRepo").value.trim();
+    const token = document.getElementById("ghToken").value.trim();
+    const path = document.getElementById("ghPath").value.trim();
+    const fileInput = document.getElementById("excelFile");
+    const modalStatus = document.getElementById("modalStatus");
+
+    if (!user || !repo || !token || !path || fileInput.files.length === 0) {
+        modalStatus.style.color = "#ff453a";
+        modalStatus.innerText = "⚠️ กรุณากรอกข้อมูลให้ครบและเลือกไฟล์";
+        return;
+    }
+
+    modalStatus.style.color = "#2f80ed";
+    modalStatus.innerText = "⏳ กำลังเชื่อมต่อ GitHub...";
+
+    const file = fileInput.files[0];
+    
+    // แปลงไฟล์เป็น Base64 ตามเงื่อนไขของ GitHub API
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = async function () {
+        const base64Content = reader.result.split(',')[1];
+        const url = `https://api.github.com/repos/${user}/${repo}/contents/${path}`;
+        
+        let sha = null;
+        
+        // 1. ตรวจสอบก่อนว่ามีไฟล์เดิมอยู่หรือไม่เพื่อดึงค่า SHA (จำเป็นสำหรับการอัปเดตทับไฟล์เดิม)
+        try {
+            const resCheck = await fetch(url, {
+                headers: { "Authorization": `token ${token}` }
+            });
+            if (resCheck.ok) {
+                const dataCheck = await resCheck.json();
+                sha = dataCheck.sha;
+            }
+        } catch (e) {}
+
+        // 2. ยิง API พ่นไฟล์ขึ้น GitHub คลังปลายทาง
+        try {
+            const bodyData = {
+                message: `Update ${path} via Machine Finder Application`,
+                content: base64Content
+            };
+            if (sha) bodyData.sha = sha; // ถ้ามีไฟล์เดิมอยู่แล้ว ให้ส่ง SHA ไปด้วยเพื่อเขียนทับ
+
+            const resUpload = await fetch(url, {
+                method: "PUT",
+                headers: {
+                    "Authorization": `token ${token}`,
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(bodyData)
+            });
+
+            if (resUpload.ok) {
+                modalStatus.style.color = "#34c759";
+                modalStatus.innerText = "🎉 อัปโหลดไฟล์ขึ้น GitHub สำเร็จ!";
+                setTimeout(() => {
+                    closeModal();
+                    location.reload(); // รีโหลดหน้าเว็บบน iPad เพื่อดึงค่าข้อมูลใหม่ที่เพิ่งอัปเดตทันที
+                }, 1500);
+            } else {
+                const errData = await resUpload.json();
+                modalStatus.style.color = "#ff453a";
+                modalStatus.innerText = `❌ ผิดพลาด: ${errData.message || 'ส่งข้อมูลไม่สำเร็จ'}`;
+            }
+        } catch (err) {
+            modalStatus.style.color = "#ff453a";
+            modalStatus.innerText = "❌ ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ GitHub ได้";
+        }
+    };
 }
 </script>
 
