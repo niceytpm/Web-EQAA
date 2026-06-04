@@ -170,7 +170,7 @@ input::placeholder {
     margin-top: 15px;
 }
 
-/* ---- หน้าต่างป็อปอัพ (Modal) สไตล์รวม ---- */
+/* ---- หน้าต่างป็อปอัพ (Modal) ---- */
 .modal-overlay {
     display: none;
     position: fixed;
@@ -291,10 +291,7 @@ input::placeholder {
 <div class="modal-overlay" id="uploadModal">
     <div class="modal-content">
         <div class="modal-title">⚙️ GitHub อัปโหลดข้อมูล</div>
-        <input type="text" id="ghUser" class="modal-input" placeholder="GitHub Username">
-        <input type="text" id="ghRepo" class="modal-input" placeholder="Repository Name">
         <input type="password" id="ghToken" class="modal-input" placeholder="GitHub Personal Access Token">
-        <input type="text" id="ghPath" class="modal-input" placeholder="ชื่อไฟล์ปลายทาง (เช่น data.xlsx)" value="data.xlsx">
         
         <label class="modal-file-label">
             📁 เลือกไฟล์ data.xlsx จากเครื่อง
@@ -313,9 +310,14 @@ input::placeholder {
 <script>
 let data = [];
 
-// กำหนดรหัสผ่านสำหรับเข้าหน้าแอดมินตรงนี้ (เปลี่ยนตามใจชอบได้เลยครับ)
-const CONFIG_ADMIN_ID = "nicertp";
-const CONFIG_ADMIN_PASS = "20686";
+// ================= [ ตั้งค่าบัญชีแอดมินและคลัง GitHub ] =================
+const CONFIG_ADMIN_ID   = "nicertp";    // ไอดีตั้งต้น (ระบบจะแปลงเป็นตัวพิมพ์ใหญ่ในการตรวจอัตโนมัติ)
+const CONFIG_ADMIN_PASS = "20686";   // รหัสผ่านตั้งต้น (ระบบจะแปลงเป็นตัวพิมพ์ใหญ่ในการตรวจอัตโนมัติ)
+
+const GITHUB_USER = "niceytpm";       
+const GITHUB_REPO = "Web-EQAA";       
+const GITHUB_PATH = "data.xlsx";      
+// =========================================================================
 
 // ดึงไฟล์ Excel มาใช้งานในระบบตอนเริ่มต้น
 fetch("data.xlsx")
@@ -372,7 +374,7 @@ function search() {
     `;
 }
 
-/* ฟังก์ชันควบคุมหน้าต่างยืนยันแอดมิน (หน้าแรก) */
+/* ควบคุมระบบยืนยันแอดมิน */
 function openLoginModal() {
     document.getElementById("loginModal").style.display = "flex";
     document.getElementById("loginStatus").innerText = "";
@@ -381,19 +383,24 @@ function openLoginModal() {
 }
 
 function verifyAdmin() {
-    const id = document.getElementById("adminId").value.trim();
-    const pass = document.getElementById("adminPass").value;
+    // ใช้ฟังก์ชัน clean() แปลงตัวอักษรที่ป้อนเข้ามาให้เป็นพิมพ์ใหญ่ทั้งหมดเพื่อเช็คคู่ขนาน
+    const inputId   = clean(document.getElementById("adminId").value);
+    const inputPass = clean(document.getElementById("adminPass").value);
+    
+    const targetId   = clean(CONFIG_ADMIN_ID);
+    const targetPass = clean(CONFIG_ADMIN_PASS);
+
     const loginStatus = document.getElementById("loginStatus");
 
-    if (id === CONFIG_ADMIN_ID && pass === CONFIG_ADMIN_PASS) {
+    if (inputId === targetId && inputPass === targetPass) {
         closeModal('loginModal');
-        openUploadModal(); // ถ้ารหัสผ่านถูก ให้กระโดดไปเปิดหน้าต่างอัปโหลดทันที
+        openUploadModal();
     } else {
         loginStatus.innerText = "⚠️ Admin ID หรือ Password ไม่ถูกต้อง";
     }
 }
 
-/* ฟังก์ชันควบคุมหน้าต่างอัปโหลดข้อมูล (หน้าสอง) */
+/* ควบคุมระบบอัปโหลดข้อมูล */
 function openUploadModal() {
     document.getElementById("uploadModal").style.display = "flex";
     document.getElementById("modalStatus").innerText = "";
@@ -414,18 +421,15 @@ function updateFileLabel(input) {
     }
 }
 
-/* ฟังก์ชันส่งไฟล์ขึ้น GitHub API ไปทับไฟล์เดิม */
+/* ฟังก์ชันส่งไฟล์เขียนทับบน GitHub API */
 async function uploadToGitHub() {
-    const user = document.getElementById("ghUser").value.trim();
-    const repo = document.getElementById("ghRepo").value.trim();
     const token = document.getElementById("ghToken").value.trim();
-    const path = document.getElementById("ghPath").value.trim();
     const fileInput = document.getElementById("excelFile");
     const modalStatus = document.getElementById("modalStatus");
 
-    if (!user || !repo || !token || !path || fileInput.files.length === 0) {
+    if (!token || fileInput.files.length === 0) {
         modalStatus.style.color = "#ff453a";
-        modalStatus.innerText = "⚠️ กรุณากรอกข้อมูลให้ครบและเลือกไฟล์";
+        modalStatus.innerText = "⚠️ กรุณากรอก Token และเลือกไฟล์ให้เรียบร้อย";
         return;
     }
 
@@ -437,10 +441,9 @@ async function uploadToGitHub() {
     reader.readAsDataURL(file);
     reader.onload = async function () {
         const base64Content = reader.result.split(',')[1];
-        const url = `https://api.github.com/repos/${user}/${repo}/contents/${path}`;
+        const url = `https://api.github.com/repos/${GITHUB_USER}/${GITHUB_REPO}/contents/${GITHUB_PATH}`;
         let sha = null;
         
-        // 1. ตรวจสอบไฟล์เดิมเพื่อเอาค่า SHA มาเขียนทับ
         try {
             const resCheck = await fetch(url, {
                 headers: { "Authorization": `token ${token}` }
@@ -451,10 +454,9 @@ async function uploadToGitHub() {
             }
         } catch (e) {}
 
-        // 2. อัปโหลดเขียนทับลงไฟล์เดิมใน GitHub
         try {
             const bodyData = {
-                message: `Update ${path} via Machine Finder Application`,
+                message: `Update ${GITHUB_PATH} via Machine Finder Application`,
                 content: base64Content
             };
             if (sha) bodyData.sha = sha;
