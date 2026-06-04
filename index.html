@@ -33,7 +33,7 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center; 
-    position: relative; /* เพื่อให้ปุ่ม + อยู่มุมขวาบนของกล่องได้ */
+    position: relative;
 }
 
 /* หัวข้อและปุ่มบวก */
@@ -73,7 +73,7 @@ body {
     justify-content: center;
 }
 
-/* โซนกรอกข้อมูล (เอาปุ่มวางออกแล้ว) */
+/* โซนกรอกข้อมูล */
 .search-row {
     display: flex;
     margin-bottom: 16px;
@@ -91,7 +91,7 @@ input {
     font-size: 18px;
     outline: none;
     width: 100%;
-    text-align: center; /* จัดตัวอักษรที่พิมพ์ให้อยู่ตรงกลางเพื่อความสวยงาม */
+    text-align: center;
 }
 
 input::placeholder {
@@ -170,7 +170,7 @@ input::placeholder {
     margin-top: 15px;
 }
 
-/* ---- หน้าต่างป็อปอัพ (Modal) สำหรับอัปโหลด GitHub ---- */
+/* ---- หน้าต่างป็อปอัพ (Modal) สไตล์รวม ---- */
 .modal-overlay {
     display: none;
     position: fixed;
@@ -240,7 +240,7 @@ input::placeholder {
     cursor: pointer;
 }
 
-.btn-upload {
+.btn-next, .btn-upload {
     flex: 1;
     background: #34c759;
     color: white;
@@ -250,6 +250,9 @@ input::placeholder {
     cursor: pointer;
     font-weight: bold;
 }
+.btn-next {
+    background: #007aff;
+}
 </style>
 </head>
 <body>
@@ -257,7 +260,7 @@ input::placeholder {
 <div class="container">
     <div class="header-area">
         <div class="header-title">🔍 ค้นหา ID MACHINE</div>
-        <button class="btn-add" onclick="openModal()">+</button>
+        <button class="btn-add" onclick="openLoginModal()">+</button>
     </div>
 
     <div class="search-row">
@@ -269,6 +272,20 @@ input::placeholder {
     <div class="status" id="status"></div>
     
     <div id="result" style="width: 100%;"></div>
+</div>
+
+<div class="modal-overlay" id="loginModal">
+    <div class="modal-content">
+        <div class="modal-title">🔒 เข้าสู่ระบบ Admin</div>
+        <input type="text" id="adminId" class="modal-input" placeholder="Admin ID">
+        <input type="password" id="adminPass" class="modal-input" placeholder="Password">
+        
+        <div class="modal-actions">
+            <button class="btn-cancel" onclick="closeModal('loginModal')">ยกเลิก</button>
+            <button class="btn-next" onclick="verifyAdmin()">ถัดไป</button>
+        </div>
+        <div id="loginStatus" style="font-size: 12px; text-align: center; color: #ff453a;"></div>
+    </div>
 </div>
 
 <div class="modal-overlay" id="uploadModal">
@@ -286,7 +303,7 @@ input::placeholder {
         <div id="fileNameDisplay" style="color: #8e8e93; font-size: 12px; text-align: center; margin-top: -5px;">ยังไม่ได้เลือกไฟล์</div>
 
         <div class="modal-actions">
-            <button class="btn-cancel" onclick="closeModal()">ยกเลิก</button>
+            <button class="btn-cancel" onclick="closeModal('uploadModal')">ยกเลิก</button>
             <button class="btn-upload" onclick="uploadToGitHub()">อัปโหลด</button>
         </div>
         <div id="modalStatus" style="font-size: 12px; text-align: center; color: #ff453a;"></div>
@@ -295,6 +312,10 @@ input::placeholder {
 
 <script>
 let data = [];
+
+// กำหนดรหัสผ่านสำหรับเข้าหน้าแอดมินตรงนี้ (เปลี่ยนตามใจชอบได้เลยครับ)
+const CONFIG_ADMIN_ID = "admin";
+const CONFIG_ADMIN_PASS = "123456";
 
 // ดึงไฟล์ Excel มาใช้งานในระบบตอนเริ่มต้น
 fetch("data.xlsx")
@@ -321,8 +342,6 @@ function search() {
 
     resultDiv.innerHTML = "";
     status.innerText = "";
-
-    // ปิดคีย์บอร์ดบน iPad หลังกดค้นหา
     document.getElementById("machineCode").blur();
 
     const found = data.filter(r => clean(r[0]).includes(key));
@@ -353,14 +372,35 @@ function search() {
     `;
 }
 
-/* ส่วนจัดการควบคุมหน้าต่างแอดมิน (Modal) */
-function openModal() {
+/* ฟังก์ชันควบคุมหน้าต่างยืนยันแอดมิน (หน้าแรก) */
+function openLoginModal() {
+    document.getElementById("loginModal").style.display = "flex";
+    document.getElementById("loginStatus").innerText = "";
+    document.getElementById("adminId").value = "";
+    document.getElementById("adminPass").value = "";
+}
+
+function verifyAdmin() {
+    const id = document.getElementById("adminId").value.trim();
+    const pass = document.getElementById("adminPass").value;
+    const loginStatus = document.getElementById("loginStatus");
+
+    if (id === CONFIG_ADMIN_ID && pass === CONFIG_ADMIN_PASS) {
+        closeModal('loginModal');
+        openUploadModal(); // ถ้ารหัสผ่านถูก ให้กระโดดไปเปิดหน้าต่างอัปโหลดทันที
+    } else {
+        loginStatus.innerText = "⚠️ Admin ID หรือ Password ไม่ถูกต้อง";
+    }
+}
+
+/* ฟังก์ชันควบคุมหน้าต่างอัปโหลดข้อมูล (หน้าสอง) */
+function openUploadModal() {
     document.getElementById("uploadModal").style.display = "flex";
     document.getElementById("modalStatus").innerText = "";
 }
 
-function closeModal() {
-    document.getElementById("uploadModal").style.display = "none";
+function closeModal(modalId) {
+    document.getElementById(modalId).style.display = "none";
 }
 
 function updateFileLabel(input) {
@@ -374,7 +414,7 @@ function updateFileLabel(input) {
     }
 }
 
-/* ฟังก์ชันส่งไฟล์ขึ้น GitHub API ด้วย Base64 Encoding */
+/* ฟังก์ชันส่งไฟล์ขึ้น GitHub API ไปทับไฟล์เดิม */
 async function uploadToGitHub() {
     const user = document.getElementById("ghUser").value.trim();
     const repo = document.getElementById("ghRepo").value.trim();
@@ -393,17 +433,14 @@ async function uploadToGitHub() {
     modalStatus.innerText = "⏳ กำลังเชื่อมต่อ GitHub...";
 
     const file = fileInput.files[0];
-    
-    // แปลงไฟล์เป็น Base64 ตามเงื่อนไขของ GitHub API
     const reader = new FileReader();
     reader.readAsDataURL(file);
     reader.onload = async function () {
         const base64Content = reader.result.split(',')[1];
         const url = `https://api.github.com/repos/${user}/${repo}/contents/${path}`;
-        
         let sha = null;
         
-        // 1. ตรวจสอบก่อนว่ามีไฟล์เดิมอยู่หรือไม่เพื่อดึงค่า SHA (จำเป็นสำหรับการอัปเดตทับไฟล์เดิม)
+        // 1. ตรวจสอบไฟล์เดิมเพื่อเอาค่า SHA มาเขียนทับ
         try {
             const resCheck = await fetch(url, {
                 headers: { "Authorization": `token ${token}` }
@@ -414,13 +451,13 @@ async function uploadToGitHub() {
             }
         } catch (e) {}
 
-        // 2. ยิง API พ่นไฟล์ขึ้น GitHub คลังปลายทาง
+        // 2. อัปโหลดเขียนทับลงไฟล์เดิมใน GitHub
         try {
             const bodyData = {
                 message: `Update ${path} via Machine Finder Application`,
                 content: base64Content
             };
-            if (sha) bodyData.sha = sha; // ถ้ามีไฟล์เดิมอยู่แล้ว ให้ส่ง SHA ไปด้วยเพื่อเขียนทับ
+            if (sha) bodyData.sha = sha;
 
             const resUpload = await fetch(url, {
                 method: "PUT",
@@ -433,10 +470,10 @@ async function uploadToGitHub() {
 
             if (resUpload.ok) {
                 modalStatus.style.color = "#34c759";
-                modalStatus.innerText = "🎉 อัปโหลดไฟล์ขึ้น GitHub สำเร็จ!";
+                modalStatus.innerText = "🎉 อัปโหลดไฟล์ทับข้อมูลเก่าใน GitHub สำเร็จ!";
                 setTimeout(() => {
-                    closeModal();
-                    location.reload(); // รีโหลดหน้าเว็บบน iPad เพื่อดึงค่าข้อมูลใหม่ที่เพิ่งอัปเดตทันที
+                    closeModal('uploadModal');
+                    location.reload(); 
                 }, 1500);
             } else {
                 const errData = await resUpload.json();
