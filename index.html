@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ค้นหา ID MACHINE</title>
 
+<link rel="apple-touch-icon" href="icon.png">
+
 <script src="xlsx.full.min.js"></script>
 
 <style>
@@ -311,12 +313,12 @@ input::placeholder {
 let data = [];
 
 // ================= [ ตั้งค่าบัญชีแอดมินและคลัง GitHub ] =================
-const CONFIG_ADMIN_ID   = "nicertp";    // ไอดีตั้งต้น (ระบบจะแปลงเป็นตัวพิมพ์ใหญ่ในการตรวจอัตโนมัติ)
-const CONFIG_ADMIN_PASS = "20686";   // รหัสผ่านตั้งต้น (ระบบจะแปลงเป็นตัวพิมพ์ใหญ่ในการตรวจอัตโนมัติ)
+const CONFIG_ADMIN_ID   = "admin";    // พิมพ์เล็ก-พิมพ์ใหญ่เข้าได้หมด
+const CONFIG_ADMIN_PASS = "123456";   // พิมพ์เล็ก-พิมพ์ใหญ่เข้าได้หมด
 
-const GITHUB_USER = "niceytpm";       
-const GITHUB_REPO = "Web-EQAA";       
-const GITHUB_PATH = "data.xlsx";      
+const GITHUB_USER = "niceytpm";       // เชื่อม Username ของคุณแล้ว
+const GITHUB_REPO = "Web-EQAA";       // เชื่อม Repository ของคุณแล้ว
+const GITHUB_PATH = "data.xlsx";      // ชื่อไฟล์ปลายทางบนระบบคลัง
 // =========================================================================
 
 // ดึงไฟล์ Excel มาใช้งานในระบบตอนเริ่มต้น
@@ -383,7 +385,6 @@ function openLoginModal() {
 }
 
 function verifyAdmin() {
-    // ใช้ฟังก์ชัน clean() แปลงตัวอักษรที่ป้อนเข้ามาให้เป็นพิมพ์ใหญ่ทั้งหมดเพื่อเช็คคู่ขนาน
     const inputId   = clean(document.getElementById("adminId").value);
     const inputPass = clean(document.getElementById("adminPass").value);
     
