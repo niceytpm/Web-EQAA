@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ค้นหา ID MACHINE</title>
 
-<link rel="apple-touch-icon" href="Icon.PNG">
+<link class="apple-touch-icon" href="Icon.PNG">
 
 <script src="xlsx.full.min.js"></script>
 
@@ -63,7 +63,7 @@ body {
     right: 0;
     display: flex;
     align-items: center;
-    gap: 12px; /* ระยะห่างระหว่างปุ่มประวัติกับปุ่มบวก */
+    gap: 12px;
 }
 
 .btn-history-trigger {
@@ -398,13 +398,6 @@ window.addEventListener('DOMContentLoaded', () => {
         const ws = wb.Sheets[wb.SheetNames[0]];
         let rows = XLSX.utils.sheet_to_json(ws, { header: 1 });
         data = rows.slice(1).filter(r => r[0]);
-
-        const urlParams = new URLSearchParams(window.location.search);
-        const searchQuery = urlParams.get('search');
-        if (searchQuery) {
-            document.getElementById("machineCode").value = searchQuery;
-            search();
-        }
     })
     .catch(() => {
         document.getElementById("status").innerText = "❌ โหลดไฟล์ Excel ไม่ได้";
@@ -439,6 +432,7 @@ function search() {
     const col2 = firstMatch[2] || ""; 
     const col3 = firstMatch[3] || ""; 
 
+    // บันทึกเข้าประวัติบนเว็บ 24 ชม.
     saveToHistory(key);
 
     resultDiv.innerHTML = `
@@ -456,12 +450,14 @@ function search() {
         </div>
     `;
 
+    // 📱 ส่งข้อมูลตัวล่าสุดออกไปที่แอปเตือนความจำ เพื่อเอาไปโชว์ที่หน้าจอล็อก
     setTimeout(() => {
-        const infoText = `${key} : ${col1} ${col2} [${col3}]`;
+        const infoText = `${key} ➡️ ${col1} | ${col2} [${col3}]`;
         window.location.href = `x-apple-reminder://x-callback-url/add?title=${encodeURIComponent(infoText)}`;
-    }, 800);
+    }, 500);
 }
 
+/* ---- ระบบประวัติการค้นหา 24 ชม. ---- */
 function saveToHistory(code) {
     let history = JSON.parse(localStorage.getItem('search_history')) || [];
     history = history.filter(item => item.code !== code);
