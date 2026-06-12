@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ค้นหา ID MACHINE</title>
 
-<link class="apple-touch-icon" href="Icon.PNG">
+<link rel="apple-touch-icon" href="Icon.PNG">
 
 <script src="xlsx.full.min.js"></script>
 
@@ -38,7 +38,7 @@ body {
     position: relative;
 }
 
-/* หัวข้อและโซนปุ่มขวาบน */
+/* หัวข้อและปุ่มควบคุมหลัก */
 .header-area {
     display: flex;
     justify-content: center;
@@ -58,25 +58,23 @@ body {
     text-align: center;
 }
 
-.header-actions {
-    position: absolute;
-    right: 0;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
+/* ไอคอนนาฬิกาประวัติอยู่ฝั่งซ้ายบน */
 .btn-history-trigger {
+    position: absolute;
+    left: 0;
     background: transparent;
     border: none;
-    font-size: 20px;
+    font-size: 22px;
     cursor: pointer;
     padding: 0;
     display: flex;
     align-items: center;
 }
 
+/* ปุ่มแอดมินอยู่ฝั่งขวาบน */
 .btn-add {
+    position: absolute;
+    right: 0;
     background: #2f80ed;
     color: white;
     border: none;
@@ -220,6 +218,14 @@ input::placeholder {
     margin-bottom: 5px;
 }
 
+.modal-subtitle {
+    color: #8e8e93;
+    font-size: 13px;
+    text-align: center;
+    margin-top: -8px;
+    margin-bottom: 4px;
+}
+
 .modal-input {
     background: #2c2c2e;
     border: 1px solid #3a3a3c;
@@ -272,9 +278,38 @@ input::placeholder {
     background: #007aff;
 }
 
+/* ส่วนเลือกกะการทำงาน (Shift Filter) */
+.shift-tabs {
+    display: flex;
+    background: #2c2c2e;
+    padding: 2px;
+    border-radius: 8px;
+    gap: 2px;
+}
+
+.shift-tab {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: #8e8e93;
+    padding: 6px 0;
+    font-size: 12px;
+    font-weight: 500;
+    border-radius: 6px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s;
+}
+
+.shift-tab.active {
+    background: #101a2d;
+    color: #2f80ed;
+    font-weight: bold;
+}
+
 /* ลิสต์ประวัติการค้นหา */
 .history-list {
-    max-height: 200px;
+    max-height: 220px;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
@@ -284,7 +319,7 @@ input::placeholder {
 
 .history-item {
     background: #2c2c2e;
-    padding: 8px 12px;
+    padding: 10px 12px;
     border-radius: 8px;
     display: flex;
     justify-content: space-between;
@@ -307,7 +342,7 @@ input::placeholder {
     color: #8e8e93;
     font-size: 14px;
     text-align: center;
-    padding: 10px 0;
+    padding: 20px 0;
 }
 </style>
 </head>
@@ -315,11 +350,9 @@ input::placeholder {
 
 <div class="container">
     <div class="header-area">
+        <button class="btn-history-trigger" onclick="openHistoryModal()">🕒</button>
         <div class="header-title">🔍 ค้นหา ID MACHINE</div>
-        <div class="header-actions">
-            <button class="btn-history-trigger" onclick="openHistoryModal()">🕒</button>
-            <button class="btn-add" onclick="openLoginModal()">+</button>
-        </div>
+        <button class="btn-add" onclick="openLoginModal()">+</button>
     </div>
 
     <div class="search-row">
@@ -369,7 +402,16 @@ input::placeholder {
 <div class="modal-overlay" id="historyModal">
     <div class="modal-content">
         <div class="modal-title">🕒 ประวัติการค้นหา (24 ชม.)</div>
+        <div class="modal-subtitle" id="historyCount">จำนวนทั้งหมด: 0 รายการ</div>
+        
+        <div class="shift-tabs">
+            <button class="shift-tab active" id="tab-all" onclick="changeHistoryShift('all')">ทั้งหมด</button>
+            <button class="shift-tab" id="tab-day" onclick="changeHistoryShift('day')">เช้า (8-20)</button>
+            <button class="shift-tab" id="tab-night" onclick="changeHistoryShift('night')">ดึก (20-8)</button>
+        </div>
+
         <div class="history-list" id="historyContainer"></div>
+        
         <div class="modal-actions">
             <button class="btn-cancel" style="flex:1;" onclick="closeModal('historyModal')">ปิดหน้าต่าง</button>
         </div>
@@ -378,6 +420,7 @@ input::placeholder {
 
 <script>
 let data = [];
+let currentShiftFilter = 'all'; // ตัวแปรเก็บสถานะการเลือกกะ ('all', 'day', 'night')
 
 // ================= [ ตั้งค่าบัญชีแอดมินและคลัง GitHub ] =================
 const CONFIG_ADMIN_ID   = "nicertp";    
@@ -388,20 +431,21 @@ const GITHUB_REPO = "Web-EQAA";
 const GITHUB_PATH = "data.xlsx";      
 // =========================================================================
 
+// ล้างประวัติที่เกิน 24 ชม. ทันทีเมื่อเปิดเว็บขึ้นมา
 window.addEventListener('DOMContentLoaded', () => {
     cleanOldHistory();
+});
 
-    fetch("data.xlsx")
-    .then(r => r.arrayBuffer())
-    .then(b => {
-        const wb = XLSX.read(b, { type: "array" });
-        const ws = wb.Sheets[wb.SheetNames[0]];
-        let rows = XLSX.utils.sheet_to_json(ws, { header: 1 });
-        data = rows.slice(1).filter(r => r[0]);
-    })
-    .catch(() => {
-        document.getElementById("status").innerText = "❌ โหลดไฟล์ Excel ไม่ได้";
-    });
+fetch("data.xlsx")
+.then(r => r.arrayBuffer())
+.then(b => {
+    const wb = XLSX.read(b, { type: "array" });
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    let rows = XLSX.utils.sheet_to_json(ws, { header: 1 });
+    data = rows.slice(1).filter(r => r[0]);
+})
+.catch(() => {
+    document.getElementById("status").innerText = "❌ โหลดไฟล์ Excel ไม่ได้";
 });
 
 function clean(v) {
@@ -409,8 +453,7 @@ function clean(v) {
 }
 
 function search() {
-    const rawKey = document.getElementById("machineCode").value;
-    const key = clean(rawKey);
+    const key = clean(document.getElementById("machineCode").value);
     const resultDiv = document.getElementById("result");
     const status = document.getElementById("status");
 
@@ -432,7 +475,7 @@ function search() {
     const col2 = firstMatch[2] || ""; 
     const col3 = firstMatch[3] || ""; 
 
-    // บันทึกเข้าประวัติบนเว็บ 24 ชม.
+    // บันทึกคำค้นหาลงในระบบประวัติการค้นหา
     saveToHistory(key);
 
     resultDiv.innerHTML = `
@@ -449,27 +492,24 @@ function search() {
             <div class="bottom-line"></div>
         </div>
     `;
-
-    // 📱 ส่งข้อมูลตัวล่าสุดออกไปที่แอปเตือนความจำ เพื่อเอาไปโชว์ที่หน้าจอล็อก
-    setTimeout(() => {
-        const infoText = `${key} ➡️ ${col1} | ${col2} [${col3}]`;
-        window.location.href = `x-apple-reminder://x-callback-url/add?title=${encodeURIComponent(infoText)}`;
-    }, 500);
 }
 
-/* ---- ระบบประวัติการค้นหา 24 ชม. ---- */
+/* ================= [ ระบบบันทึกและคำนวณประวัติการค้นหา ] ================= */
+
 function saveToHistory(code) {
     let history = JSON.parse(localStorage.getItem('search_history')) || [];
+    // ถ้าเคยค้นหาคำนี้ไปแล้ว ให้เอาตัวเก่าออกก่อนเพื่อเอามาเรียงใหม่ที่บนสุด
     history = history.filter(item => item.code !== code);
     
     history.unshift({
         code: code,
-        time: new Date().getTime()
+        time: new Date().getTime() // บันทึกเวลาที่ทำการค้นหาเป็นมิลลิวินาที
     });
     
     localStorage.setItem('search_history', JSON.stringify(history));
 }
 
+// ล้างรายการที่มีอายุเก่ากว่า 24 ชั่วโมงออกจากระบบความจำเครื่อง
 function cleanOldHistory() {
     let history = JSON.parse(localStorage.getItem('search_history')) || [];
     const now = new Date().getTime();
@@ -479,16 +519,61 @@ function cleanOldHistory() {
     localStorage.setItem('search_history', JSON.stringify(history));
 }
 
+// ฟังก์ชันสำหรับเปลี่ยนกะบนแถบสลับ
+function changeHistoryShift(shift) {
+    currentShiftFilter = shift;
+    
+    // อัปเดตสีปุ่มของกะที่กำลังถูกเลือก
+    document.getElementById("tab-all").classList.remove("active");
+    document.getElementById("tab-day").classList.remove("active");
+    document.getElementById("tab-night").classList.remove("active");
+    
+    document.getElementById("tab-" + shift).classList.add("active");
+    
+    // เรียกเรนเดอร์หน้าต่างรายการใหม่ตามกะที่เลือก
+    renderHistoryList();
+}
+
 function openHistoryModal() {
     cleanOldHistory();
+    currentShiftFilter = 'all'; // รีเซ็ตมาที่หน้าแสดงทั้งหมดทุกครั้งที่เปิดป็อปอัพ
+    
+    document.getElementById("tab-all").classList.add("active");
+    document.getElementById("tab-day").classList.remove("active");
+    document.getElementById("tab-night").classList.remove("active");
+    
+    renderHistoryList();
+    document.getElementById("historyModal").style.display = "flex";
+}
+
+// ฟังก์ชันประมวลผลคัดกรองกะทำงานและสร้างรายการแสดงผลลงบนเว็บ
+function renderHistoryList() {
     const history = JSON.parse(localStorage.getItem('search_history')) || [];
     const container = document.getElementById("historyContainer");
     container.innerHTML = "";
     
-    if (history.length === 0) {
-        container.innerHTML = `<div class="history-empty">ไม่มีประวัติการค้นหาใน 24 ชม.</div>`;
+    // คัดกรองรายการประวัติตามช่วงเวลากะ
+    const filteredHistory = history.filter(item => {
+        const itemDate = new Date(item.time);
+        const hours = itemDate.getHours();
+        
+        if (currentShiftFilter === 'day') {
+            // กะเช้า: ตั้งแต่ 08:00 น. จนถึงก่อน 20:00 น. (8:00 - 19:59)
+            return hours >= 8 && hours < 20;
+        } else if (currentShiftFilter === 'night') {
+            // กะดึก: ตั้งแต่ 20:00 น. จนถึงก่อน 08:00 น. ของอีกวัน (20:00 - 7:59)
+            return hours >= 20 || hours < 8;
+        }
+        return true; // กรณีเลือก 'all' (ทั้งหมด)
+    });
+    
+    // อัปเดตจำนวนยอดสรุปผลลัพธ์ทั้งหมดด้านบน
+    document.getElementById("historyCount").innerText = `จำนวนทั้งหมด: ${filteredHistory.length} รายการ`;
+    
+    if (filteredHistory.length === 0) {
+        container.innerHTML = `<div class="history-empty">ไม่มีข้อมูลประวัติในช่วงเวลานี้</div>`;
     } else {
-        history.forEach(item => {
+        filteredHistory.forEach(item => {
             const date = new Date(item.time);
             const timeStr = date.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) + ' น.';
             
@@ -506,8 +591,9 @@ function openHistoryModal() {
             container.appendChild(div);
         });
     }
-    document.getElementById("historyModal").style.display = "flex";
 }
+
+/* ========================================================================= */
 
 function openLoginModal() {
     document.getElementById("loginModal").style.display = "flex";
