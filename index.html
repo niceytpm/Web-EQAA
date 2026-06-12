@@ -38,7 +38,7 @@ body {
     position: relative;
 }
 
-/* หัวข้อและปุ่มบวก */
+/* หัวข้อและโซนปุ่มขวาบน */
 .header-area {
     display: flex;
     justify-content: center;
@@ -58,9 +58,25 @@ body {
     text-align: center;
 }
 
-.btn-add {
+.header-actions {
     position: absolute;
     right: 0;
+    display: flex;
+    align-items: center;
+    gap: 12px; /* ระยะห่างระหว่างปุ่มประวัติกับปุ่มบวก */
+}
+
+.btn-history-trigger {
+    background: transparent;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    padding: 0;
+    display: flex;
+    align-items: center;
+}
+
+.btn-add {
     background: #2f80ed;
     color: white;
     border: none;
@@ -255,6 +271,44 @@ input::placeholder {
 .btn-next {
     background: #007aff;
 }
+
+/* ลิสต์ประวัติการค้นหา */
+.history-list {
+    max-height: 200px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-right: 4px;
+}
+
+.history-item {
+    background: #2c2c2e;
+    padding: 8px 12px;
+    border-radius: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+}
+
+.history-code {
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.history-time {
+    color: #8e8e93;
+    font-size: 11px;
+}
+
+.history-empty {
+    color: #8e8e93;
+    font-size: 14px;
+    text-align: center;
+    padding: 10px 0;
+}
 </style>
 </head>
 <body>
@@ -262,7 +316,10 @@ input::placeholder {
 <div class="container">
     <div class="header-area">
         <div class="header-title">🔍 ค้นหา ID MACHINE</div>
-        <button class="btn-add" onclick="openLoginModal()">+</button>
+        <div class="header-actions">
+            <button class="btn-history-trigger" onclick="openHistoryModal()">🕒</button>
+            <button class="btn-add" onclick="openLoginModal()">+</button>
+        </div>
     </div>
 
     <div class="search-row">
@@ -309,44 +366,66 @@ input::placeholder {
     </div>
 </div>
 
+<div class="modal-overlay" id="historyModal">
+    <div class="modal-content">
+        <div class="modal-title">🕒 ประวัติการค้นหา (24 ชม.)</div>
+        <div class="history-list" id="historyContainer"></div>
+        <div class="modal-actions">
+            <button class="btn-cancel" style="flex:1;" onclick="closeModal('historyModal')">ปิดหน้าต่าง</button>
+        </div>
+    </div>
+</div>
+
 <script>
 let data = [];
 
 // ================= [ ตั้งค่าบัญชีแอดมินและคลัง GitHub ] =================
-const CONFIG_ADMIN_ID   = "nicertp";    // พิมพ์เล็ก-พิมพ์ใหญ่เข้าได้หมด
-const CONFIG_ADMIN_PASS = "20686";   // พิมพ์เล็ก-พิมพ์ใหญ่เข้าได้หมด
+const CONFIG_ADMIN_ID   = "nicertp";    
+const CONFIG_ADMIN_PASS = "20686";   
 
-const GITHUB_USER = "niceytpm";       // เชื่อม Username ของคุณแล้ว
-const GITHUB_REPO = "Web-EQAA";       // เชื่อม Repository ของคุณแล้ว
-const GITHUB_PATH = "data.xlsx";      // ชื่อไฟล์ปลายทางบนระบบคลัง
+const GITHUB_USER = "niceytpm";       
+const GITHUB_REPO = "Web-EQAA";       
+const GITHUB_PATH = "data.xlsx";      
 // =========================================================================
 
-// ดึงไฟล์ Excel มาใช้งานในระบบตอนเริ่มต้น
-fetch("data.xlsx")
-.then(r => r.arrayBuffer())
-.then(b => {
-    const wb = XLSX.read(b, { type: "array" });
-    const ws = wb.Sheets[wb.SheetNames[0]];
-    let rows = XLSX.utils.sheet_to_json(ws, { header: 1 });
-    data = rows.slice(1).filter(r => r[0]);
-})
-.catch(() => {
-    document.getElementById("status").innerText = "❌ โหลดไฟล์ Excel ไม่ได้";
+window.addEventListener('DOMContentLoaded', () => {
+    cleanOldHistory();
+
+    fetch("data.xlsx")
+    .then(r => r.arrayBuffer())
+    .then(b => {
+        const wb = XLSX.read(b, { type: "array" });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        let rows = XLSX.utils.sheet_to_json(ws, { header: 1 });
+        data = rows.slice(1).filter(r => r[0]);
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const searchQuery = urlParams.get('search');
+        if (searchQuery) {
+            document.getElementById("machineCode").value = searchQuery;
+            search();
+        }
+    })
+    .catch(() => {
+        document.getElementById("status").innerText = "❌ โหลดไฟล์ Excel ไม่ได้";
+    });
 });
 
 function clean(v) {
     return String(v || "").replace(/[\s\u00A0]+/g, "").toUpperCase();
 }
 
-/* ฟังก์ชันค้นหา */
 function search() {
-    const key = clean(document.getElementById("machineCode").value);
+    const rawKey = document.getElementById("machineCode").value;
+    const key = clean(rawKey);
     const resultDiv = document.getElementById("result");
     const status = document.getElementById("status");
 
     resultDiv.innerHTML = "";
     status.innerText = "";
     document.getElementById("machineCode").blur();
+
+    if (!key) return;
 
     const found = data.filter(r => clean(r[0]).includes(key));
 
@@ -359,6 +438,8 @@ function search() {
     const col1 = firstMatch[1] || ""; 
     const col2 = firstMatch[2] || ""; 
     const col3 = firstMatch[3] || ""; 
+
+    saveToHistory(key);
 
     resultDiv.innerHTML = `
         <div class="result-box">
@@ -374,9 +455,64 @@ function search() {
             <div class="bottom-line"></div>
         </div>
     `;
+
+    setTimeout(() => {
+        const infoText = `${key} : ${col1} ${col2} [${col3}]`;
+        window.location.href = `x-apple-reminder://x-callback-url/add?title=${encodeURIComponent(infoText)}`;
+    }, 800);
 }
 
-/* ควบคุมระบบยืนยันแอดมิน */
+function saveToHistory(code) {
+    let history = JSON.parse(localStorage.getItem('search_history')) || [];
+    history = history.filter(item => item.code !== code);
+    
+    history.unshift({
+        code: code,
+        time: new Date().getTime()
+    });
+    
+    localStorage.setItem('search_history', JSON.stringify(history));
+}
+
+function cleanOldHistory() {
+    let history = JSON.parse(localStorage.getItem('search_history')) || [];
+    const now = new Date().getTime();
+    const twentyFourHours = 24 * 60 * 60 * 1000;
+    
+    history = history.filter(item => (now - item.time) < twentyFourHours);
+    localStorage.setItem('search_history', JSON.stringify(history));
+}
+
+function openHistoryModal() {
+    cleanOldHistory();
+    const history = JSON.parse(localStorage.getItem('search_history')) || [];
+    const container = document.getElementById("historyContainer");
+    container.innerHTML = "";
+    
+    if (history.length === 0) {
+        container.innerHTML = `<div class="history-empty">ไม่มีประวัติการค้นหาใน 24 ชม.</div>`;
+    } else {
+        history.forEach(item => {
+            const date = new Date(item.time);
+            const timeStr = date.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) + ' น.';
+            
+            const div = document.createElement('div');
+            div.className = 'history-item';
+            div.onclick = () => {
+                document.getElementById("machineCode").value = item.code;
+                search();
+                closeModal('historyModal');
+            };
+            div.innerHTML = `
+                <span class="history-code">${item.code}</span>
+                <span class="history-time">${timeStr}</span>
+            `;
+            container.appendChild(div);
+        });
+    }
+    document.getElementById("historyModal").style.display = "flex";
+}
+
 function openLoginModal() {
     document.getElementById("loginModal").style.display = "flex";
     document.getElementById("loginStatus").innerText = "";
@@ -401,7 +537,6 @@ function verifyAdmin() {
     }
 }
 
-/* ควบคุมระบบอัปโหลดข้อมูล */
 function openUploadModal() {
     document.getElementById("uploadModal").style.display = "flex";
     document.getElementById("modalStatus").innerText = "";
@@ -422,7 +557,6 @@ function updateFileLabel(input) {
     }
 }
 
-/* ฟังก์ชันส่งไฟล์เขียนทับบน GitHub API */
 async function uploadToGitHub() {
     const token = document.getElementById("ghToken").value.trim();
     const fileInput = document.getElementById("excelFile");
