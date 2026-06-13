@@ -58,7 +58,6 @@ body {
     text-align: center;
 }
 
-/* ไอคอนนาฬิกาประวัติอยู่ฝั่งซ้ายบน */
 .btn-history-trigger {
     position: absolute;
     left: 0;
@@ -71,7 +70,6 @@ body {
     align-items: center;
 }
 
-/* ปุ่มแอดมินอยู่ฝั่งขวาบน */
 .btn-add {
     position: absolute;
     right: 0;
@@ -203,7 +201,7 @@ input::placeholder {
     padding: 20px;
     border-radius: 20px;
     width: 100%;
-    max-width: 320px;
+    max-width: 340px;
     border: 1px solid #2c2c2e;
     display: flex;
     flex-direction: column;
@@ -219,10 +217,11 @@ input::placeholder {
 }
 
 .modal-subtitle {
-    color: #8e8e93;
-    font-size: 13px;
+    color: #2f80ed;
+    font-size: 14px;
+    font-weight: bold;
     text-align: center;
-    margin-top: -8px;
+    margin-top: -4px;
     margin-bottom: 4px;
 }
 
@@ -278,7 +277,21 @@ input::placeholder {
     background: #007aff;
 }
 
-/* ส่วนเลือกกะการทำงาน (Shift Filter) */
+/* ส่วนกล่องเลือกวันที่ในหน้าประวัติ */
+.history-date-picker {
+    width: 100%;
+    background: #2c2c2e;
+    border: 1px solid #3a3a3c;
+    border-radius: 8px;
+    padding: 8px;
+    color: #ffffff;
+    font-size: 14px;
+    text-align: center;
+    outline: none;
+    cursor: pointer;
+}
+
+/* ส่วนเลือกกะการทำงาน (Shift Filter) เพิ่มแท็บทั้งหมดเข้าไป */
 .shift-tabs {
     display: flex;
     background: #2c2c2e;
@@ -292,7 +305,7 @@ input::placeholder {
     background: transparent;
     border: none;
     color: #8e8e93;
-    padding: 6px 0;
+    padding: 8px 0;
     font-size: 12px;
     font-weight: 500;
     border-radius: 6px;
@@ -336,13 +349,7 @@ input::placeholder {
 .history-time {
     color: #8e8e93;
     font-size: 11px;
-}
-
-.history-empty {
-    color: #8e8e93;
-    font-size: 14px;
-    text-align: center;
-    padding: 20px 0;
+    text-align: right;
 }
 </style>
 </head>
@@ -401,9 +408,11 @@ input::placeholder {
 
 <div class="modal-overlay" id="historyModal">
     <div class="modal-content">
-        <div class="modal-title">🕒 ประวัติการค้นหา (24 ชม.)</div>
+        <div class="modal-title">🕒 ประวัติการค้นหา</div>
         <div class="modal-subtitle" id="historyCount">จำนวนทั้งหมด: 0 รายการ</div>
         
+        <input type="date" id="historyDate" class="history-date-picker" onchange="updateHistoryDate()">
+
         <div class="shift-tabs">
             <button class="shift-tab active" id="tab-all" onclick="changeHistoryShift('all')">ทั้งหมด</button>
             <button class="shift-tab" id="tab-day" onclick="changeHistoryShift('day')">เช้า (8-20)</button>
@@ -420,18 +429,15 @@ input::placeholder {
 
 <script>
 let data = [];
-let currentShiftFilter = 'all'; // ตัวแปรเก็บสถานะการเลือกกะ ('all', 'day', 'night')
+let currentShiftFilter = 'all'; // เริ่มต้นหน้าประวัติแสดงแท็บทั้งหมดของวันนั้น ๆ ก่อน
 
-// ================= [ ตั้งค่าบัญชีแอดมินและคลัง GitHub ] =================
 const CONFIG_ADMIN_ID   = "nicertp";    
 const CONFIG_ADMIN_PASS = "20686";   
 
 const GITHUB_USER = "niceytpm";       
 const GITHUB_REPO = "Web-EQAA";       
 const GITHUB_PATH = "data.xlsx";      
-// =========================================================================
 
-// ล้างประวัติที่เกิน 24 ชม. ทันทีเมื่อเปิดเว็บขึ้นมา
 window.addEventListener('DOMContentLoaded', () => {
     cleanOldHistory();
 });
@@ -475,7 +481,6 @@ function search() {
     const col2 = firstMatch[2] || ""; 
     const col3 = firstMatch[3] || ""; 
 
-    // บันทึกคำค้นหาลงในระบบประวัติการค้นหา
     saveToHistory(key);
 
     resultDiv.innerHTML = `
@@ -494,87 +499,118 @@ function search() {
     `;
 }
 
-/* ================= [ ระบบบันทึกและคำนวณประวัติการค้นหา ] ================= */
+/* ================= [ ระบบประวัติคำนวณแยกย่อยกะ + แสดงผลยอดสรุป ] ================= */
 
 function saveToHistory(code) {
     let history = JSON.parse(localStorage.getItem('search_history')) || [];
-    // ถ้าเคยค้นหาคำนี้ไปแล้ว ให้เอาตัวเก่าออกก่อนเพื่อเอามาเรียงใหม่ที่บนสุด
     history = history.filter(item => item.code !== code);
     
     history.unshift({
         code: code,
-        time: new Date().getTime() // บันทึกเวลาที่ทำการค้นหาเป็นมิลลิวินาที
+        time: new Date().getTime()
     });
     
     localStorage.setItem('search_history', JSON.stringify(history));
 }
 
-// ล้างรายการที่มีอายุเก่ากว่า 24 ชั่วโมงออกจากระบบความจำเครื่อง
 function cleanOldHistory() {
     let history = JSON.parse(localStorage.getItem('search_history')) || [];
     const now = new Date().getTime();
-    const twentyFourHours = 24 * 60 * 60 * 1000;
+    const fortyEightHours = 24 * 60 * 60 * 1000 * 2; 
     
-    history = history.filter(item => (now - item.time) < twentyFourHours);
+    history = history.filter(item => (now - item.time) < fortyEightHours);
     localStorage.setItem('search_history', JSON.stringify(history));
 }
 
-// ฟังก์ชันสำหรับเปลี่ยนกะบนแถบสลับ
-function changeHistoryShift(shift) {
-    currentShiftFilter = shift;
-    
-    // อัปเดตสีปุ่มของกะที่กำลังถูกเลือก
-    document.getElementById("tab-all").classList.remove("active");
-    document.getElementById("tab-day").classList.remove("active");
-    document.getElementById("tab-night").classList.remove("active");
-    
-    document.getElementById("tab-" + shift).classList.add("active");
-    
-    // เรียกเรนเดอร์หน้าต่างรายการใหม่ตามกะที่เลือก
-    renderHistoryList();
+function getLocalDateString(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
 }
 
 function openHistoryModal() {
     cleanOldHistory();
-    currentShiftFilter = 'all'; // รีเซ็ตมาที่หน้าแสดงทั้งหมดทุกครั้งที่เปิดป็อปอัพ
     
+    // รีเซ็ตค่าแท็บกลับมาที่ "ทั้งหมด" ทุกครั้งเมื่อเปิดหน้าประวัติ
+    currentShiftFilter = 'all';
     document.getElementById("tab-all").classList.add("active");
     document.getElementById("tab-day").classList.remove("active");
     document.getElementById("tab-night").classList.remove("active");
-    
+
+    // โหลดวันที่ปัจจุบันใส่ลงในช่องอินพุตเสมอเมื่อเปิดขึ้นมา
+    const now = new Date();
+    const datePicker = document.getElementById("historyDate");
+    datePicker.value = getLocalDateString(now);
+
+    // ล็อกปฏิทินให้เลือกกดได้แค่ขอบเขตช่วง 2 วันล่าสุดเท่านั้น (วันนี้ และ เมื่อวาน)
+    const yesterday = new Date(now.getTime() - (24 * 60 * 60 * 1000));
+    datePicker.max = getLocalDateString(now);
+    datePicker.min = getLocalDateString(yesterday);
+
     renderHistoryList();
     document.getElementById("historyModal").style.display = "flex";
 }
 
-// ฟังก์ชันประมวลผลคัดกรองกะทำงานและสร้างรายการแสดงผลลงบนเว็บ
+function changeHistoryShift(shift) {
+    currentShiftFilter = shift;
+    document.getElementById("tab-all").classList.remove("active");
+    document.getElementById("tab-day").classList.remove("active");
+    document.getElementById("tab-night").classList.remove("active");
+    document.getElementById("tab-" + shift).classList.add("active");
+    
+    renderHistoryList();
+}
+
+function updateHistoryDate() {
+    renderHistoryList();
+}
+
 function renderHistoryList() {
     const history = JSON.parse(localStorage.getItem('search_history')) || [];
     const container = document.getElementById("historyContainer");
     container.innerHTML = "";
     
-    // คัดกรองรายการประวัติตามช่วงเวลากะ
+    const selectedDateVal = document.getElementById("historyDate").value;
+    if (!selectedDateVal) return;
+
+    // แยกข้อมูลปี เดือน วัน เพื่อคำนวณช่วงเวลากะงานรายวันแบบแม่นยำ
+    const [sYear, sMonth, sDay] = selectedDateVal.split('-').map(Number);
+    
+    // คำนวณช่วงของกะเช้า (08:00 น. - 20:00 น. ของวันนั้น ๆ)
+    const target8AM = new Date(sYear, sMonth - 1, sDay, 8, 0, 0, 0).getTime();
+    const target8PM = new Date(sYear, sMonth - 1, sDay, 20, 0, 0, 0).getTime();
+    
+    // คำนวณขอบเขตสิ้นสุดกะดึก (08:00 น. ของเช้าวันถัดไป)
+    const nextDay8AM = target8AM + (24 * 60 * 60 * 1000);
+
     const filteredHistory = history.filter(item => {
-        const itemDate = new Date(item.time);
-        const hours = itemDate.getHours();
+        const itemTime = item.time;
         
         if (currentShiftFilter === 'day') {
-            // กะเช้า: ตั้งแต่ 08:00 น. จนถึงก่อน 20:00 น. (8:00 - 19:59)
-            return hours >= 8 && hours < 20;
+            // แสดงเฉพาะรายการกะเช้าของวันที่เลือก
+            return itemTime >= target8AM && itemTime < target8PM;
         } else if (currentShiftFilter === 'night') {
-            // กะดึก: ตั้งแต่ 20:00 น. จนถึงก่อน 08:00 น. ของอีกวัน (20:00 - 7:59)
-            return hours >= 20 || hours < 8;
+            // แสดงเฉพาะรายการกะดึกวนลูปของวันที่เลือก (20:00น. ข้ามไปถึง 08:00น. อีกวัน)
+            return itemTime >= target8PM && itemTime < nextDay8AM;
+        } else if (currentShiftFilter === 'all') {
+            // แสดงรวมทั้งหมด ทั้งกะเช้าและกะดึกที่ผูกกับวันที่เลือก (ตั้งแต่ 08:00น. ยิงยาวไปจนถึง 08:00น. ของเช้าอีกวัน)
+            return itemTime >= target8AM && itemTime < nextDay8AM;
         }
-        return true; // กรณีเลือก 'all' (ทั้งหมด)
+        return false;
     });
     
-    // อัปเดตจำนวนยอดสรุปผลลัพธ์ทั้งหมดด้านบน
+    // อัปเดตตัวเลขบอกยอดรวมทั้งหมดของเงื่อนไขที่ผู้ใช้เลือกแบบเรียลไทม์
     document.getElementById("historyCount").innerText = `จำนวนทั้งหมด: ${filteredHistory.length} รายการ`;
     
     if (filteredHistory.length === 0) {
-        container.innerHTML = `<div class="history-empty">ไม่มีข้อมูลประวัติในช่วงเวลานี้</div>`;
+        container.innerHTML = `<div style="color:#8e8e93; font-size:14px; text-align:center; padding:20px 0;">ไม่มีข้อมูลประวัติในช่วงเวลานี้</div>`;
     } else {
         filteredHistory.forEach(item => {
             const date = new Date(item.time);
+            
+            // แสดงผลชื่อวันย่อและวันที่ตามแบบไทย เช่น "ส. 13 มิ.ย."
+            const dateStr = date.toLocaleDateString('th-TH', { weekday: 'short', day: 'numeric', month: 'short' });
             const timeStr = date.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) + ' น.';
             
             const div = document.createElement('div');
@@ -586,7 +622,7 @@ function renderHistoryList() {
             };
             div.innerHTML = `
                 <span class="history-code">${item.code}</span>
-                <span class="history-time">${timeStr}</span>
+                <span class="history-time">${dateStr}<br>${timeStr}</span>
             `;
             container.appendChild(div);
         });
