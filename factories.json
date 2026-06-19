@@ -1,7 +1,7 @@
 {
   "factories": [
-    { "name": "สระบุรี", "db": "machines_สระบุรี.db", "version": "1.0.0" },
-    { "name": "โรจนะ", "db": "machines_โรจนะ.db", "version": "1.0.0" },
-    { "name": "6000", "db": "machines_6000.db", "version": "1.0.0" }
+    { "name": "สระบุรี", "excel": "data_สระบุรี.xlsx" },
+    { "name": "โรจนะ", "excel": "data_โรจนะ.xlsx" },
+    { "name": "6000", "excel": "data_6000.xlsx" }
   ]
 }

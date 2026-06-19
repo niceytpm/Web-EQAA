@@ -90,7 +90,7 @@ let currentShift='all';
 const $=id=>document.getElementById(id);
 const clean=v=>String(v??'').replace(/[\s\u00A0]+/g,'').toUpperCase();
 const esc=v=>String(v??'').replace(/[&<>\"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c]));
-const factoryKey=f=>f.slug||String(f.db||'').replace(/^machines_/i,'').replace(/\.db$/i,'')||f.name;
+const factoryKey=f=>f.slug||String(f.excel||'').replace(/^data_/i,'').replace(/\.xlsx$/i,'')||f.name;
 
 async function loadFactories(){
   try{
@@ -115,9 +115,9 @@ async function loadSelectedFactory(){
   localStorage.setItem('eq_factory',key);
   $('factoryCurrent').textContent=`โรงงาน: ${f.name||key}`;
   $('status').style.color='#8e8e93'; $('status').textContent='กำลังโหลดข้อมูล...'; rows=[]; $('result').innerHTML='';
-  const suffix=String(f.db||`machines_${key}.db`).replace(/^machines_/i,'').replace(/\.db$/i,'');
+  const excelFile=String(f.excel||`data_${key}.xlsx`);
   try{
-    const r=await fetch(`data_${encodeURIComponent(suffix)}.xlsx?ts=${Date.now()}`,{cache:'no-store'});
+    const r=await fetch(`${encodeURI(excelFile)}?ts=${Date.now()}`,{cache:'no-store'});
     if(!r.ok) throw new Error('ยังไม่มีข้อมูลของโรงงานนี้');
     const buf=await r.arrayBuffer();
     const wb=XLSX.read(buf,{type:'array'});
