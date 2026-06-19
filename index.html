@@ -100,7 +100,7 @@ async function loadFactories(){
     factories=Array.isArray(j)?j:(j.factories||[]);
   }catch(e){ factories=[]; $('factoryCurrent').textContent=e.message; }
   if(!factories.length){ $('factoryCurrent').textContent='ยังไม่มีรายชื่อโรงงาน'; return; }
-  $('factorySelect').innerHTML=factories.map(f=>`<option value="${esc(factoryKey(f))}">${esc(f.name)}${f.version?' • v'+esc(f.version):''}</option>`).join('');
+  $('factorySelect').innerHTML=factories.map(f=>`<option value="${esc(factoryKey(f))}">${esc(f.name)}</option>`).join('');
   const saved=localStorage.getItem('eq_factory');
   $('factorySelect').value=factories.some(f=>factoryKey(f)===saved)?saved:factoryKey(factories[0]);
   await loadSelectedFactory();
@@ -113,7 +113,7 @@ async function loadSelectedFactory(){
   const key=factoryKey(f);
   if(!key)return;
   localStorage.setItem('eq_factory',key);
-  $('factoryCurrent').textContent=`โรงงาน: ${f.name||key}${f.version?' • v'+f.version:''}`;
+  $('factoryCurrent').textContent=`โรงงาน: ${f.name||key}`;
   $('status').style.color='#8e8e93'; $('status').textContent='กำลังโหลดข้อมูล...'; rows=[]; $('result').innerHTML='';
   const suffix=String(f.db||`machines_${key}.db`).replace(/^machines_/i,'').replace(/\.db$/i,'');
   try{
