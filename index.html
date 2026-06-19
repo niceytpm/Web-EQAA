@@ -1,13 +1,168 @@
-<!doctype html><html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>EquipmentAA</title><link rel="icon" href="icon.png"><link rel="apple-touch-icon" href="icon.png"><script src="xlsx.full.min.js"></script><style>
-:root{color-scheme:dark;--bg:#050912;--card:#0d1626;--line:#263956;--text:#eef4ff;--muted:#91a2ba;--blue:#22b5ed}*{box-sizing:border-box}body{margin:0;background:linear-gradient(180deg,#030711,#09111e);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;min-height:100vh}.wrap{max-width:760px;margin:auto;padding:22px 16px 50px}.head{display:flex;align-items:center;gap:12px;margin-bottom:18px}.logo{width:52px;height:52px;border-radius:14px}.head h1{font-size:24px;margin:0}.head p{margin:3px 0 0;color:var(--muted)}.card{background:rgba(13,22,38,.95);border:1px solid var(--line);border-radius:20px;padding:16px;margin-bottom:14px;box-shadow:0 12px 34px #0007}label{display:block;color:var(--muted);font-size:13px;margin-bottom:7px}select,input,button{font:inherit}select,input{width:100%;background:#07101d;color:var(--text);border:1px solid #314765;border-radius:13px;padding:13px}button{border:0;border-radius:13px;padding:12px 16px;font-weight:750;background:linear-gradient(135deg,#31c4f6,#138bc8);color:#02131d}.row{display:flex;gap:10px}.row>*{flex:1}.status{font-size:13px;color:var(--muted);margin-top:9px}.result{display:grid;grid-template-columns:1.3fr .7fr 1fr;gap:8px;padding:13px;border:1px solid #2e4563;border-radius:14px;margin-top:10px;background:#081322}.result b{display:block;font-size:18px}.result small{display:block;color:var(--muted);margin-bottom:3px}.empty{text-align:center;color:var(--muted);padding:24px}.history{font-family:ui-monospace,Consolas,monospace;font-size:12px;line-height:1.7;white-space:pre-wrap;color:#c8d5e7;max-height:260px;overflow:auto}@media(max-width:560px){.result{grid-template-columns:1fr 1fr}.result>div:last-child{grid-column:1/-1}.row{display:block}.row button{width:100%;margin-top:9px}}
-</style></head><body><main class="wrap"><header class="head"><img class="logo" src="icon.png"><div><h1>EquipmentAA</h1><p>ค้นหาเลขเครื่องแยกตามโรงงาน</p></div></header><section class="card"><label>เลือกโรงงาน</label><select id="factory"></select><div id="status" class="status">กำลังโหลดรายชื่อโรงงาน...</div></section><section class="card"><label>ค้นหา ID Machine</label><div class="row"><input id="q" placeholder="เช่น 400G" autocomplete="off"><button id="search">ค้นหา</button></div><div id="results" class="empty">เลือกโรงงานแล้วพิมพ์เลขเครื่อง</div></section><section class="card"><label>ประวัติการค้นหา 3 วันล่าสุด</label><div id="history" class="history">ยังไม่มีประวัติ</div></section></main><script>
-const $=id=>document.getElementById(id);let rows=[],factories=[];const rawBase='./';
-function esc(v){return String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
-function norm(v){return String(v??'').trim().toLowerCase()}
-async function loadFactories(){try{const r=await fetch(rawBase+'factories.json?ts='+Date.now(),{cache:'no-store'});if(!r.ok)throw 0;const j=await r.json();factories=Array.isArray(j)?j:(j.factories||[])}catch{factories=[]}if(!factories.length){$('status').textContent='ยังไม่มีรายชื่อโรงงาน';$('factory').innerHTML='';$('results').textContent='ยังไม่มีรายชื่อโรงงาน';return}$('factory').innerHTML=factories.map(f=>{const slug=f.slug||String(f.db||'').replace(/^machines_/i,'').replace(/\.db$/i,'')||f.name;return `<option value="${esc(slug)}" data-db="${esc(f.db||'')}">${esc(f.name)}${f.version?' • v'+esc(f.version):''}</option>`}).join('');const saved=localStorage.getItem('eq_factory');if(factories.some(f=>(f.slug||String(f.db||'').replace(/^machines_/i,'').replace(/\.db$/i,'')||f.name)===saved))$('factory').value=saved;await loadData()}
-async function loadData(){const slug=$('factory').value;localStorage.setItem('eq_factory',slug);const f=factories.find(x=>(x.slug||String(x.db||'').replace(/^machines_/i,'').replace(/\.db$/i,'')||x.name)===slug)||{};const suffix=String(f.db||`machines_${slug}.db`).replace(/^machines_/i,'').replace(/\.db$/i,'');$('status').textContent='กำลังโหลดข้อมูล '+(f.name||slug)+'...';rows=[];$('results').className='empty';$('results').textContent='กำลังโหลดข้อมูล...';try{const r=await fetch(rawBase+`data_${encodeURIComponent(suffix)}.xlsx?ts=${Date.now()}`,{cache:'no-store'});if(!r.ok)throw new Error('ยังไม่มีข้อมูลของโรงงานนี้');const buf=await r.arrayBuffer();const wb=XLSX.read(buf,{type:'array'});const aoa=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:''});rows=aoa.slice(1).filter(x=>String(x[0]||'').trim()).map(x=>({id:x[0],model:x[1],no:x[2],department:x[3]}));$('status').textContent=`โหลดแล้ว ${rows.length.toLocaleString()} เครื่อง / ${f.name||slug} / v${f.version||'-'}`;$('results').textContent='พิมพ์เลขเครื่องแล้วกดค้นหา'}catch(e){$('status').textContent=e.message||e;$('results').textContent=e.message||e}}
-function search(){const q=norm($('q').value);if(!q)return;const found=rows.filter(r=>norm(r.id)===q);const f=factories.find(x=>(x.slug||String(x.db||'').replace(/^machines_/i,'').replace(/\.db$/i,'')||x.name)===$('factory').value);saveHistory(q,found.length,f?.name||$('factory').value);if(!found.length){$('results').className='empty';$('results').textContent='ไม่พบเลขเครื่อง '+$('q').value;return}$('results').className='';$('results').innerHTML=found.map(r=>`<div class="result"><div><small>Model</small><b>${esc(r.model)}</b></div><div><small>No.</small><b>${esc(r.no)}</b></div><div><small>Department</small><b>${esc(r.department)}</b></div></div>`).join('')}
-function saveHistory(q,count,factory){const h=JSON.parse(localStorage.getItem('eq_history3')||'[]');h.unshift({at:Date.now(),q,count,factory});localStorage.setItem('eq_history3',JSON.stringify(h.filter(x=>Date.now()-x.at<3*86400000).slice(0,100)));renderHistory()}
-function renderHistory(){const h=JSON.parse(localStorage.getItem('eq_history3')||'[]').filter(x=>Date.now()-x.at<3*86400000);$('history').textContent=h.length?h.map(x=>`${new Date(x.at).toLocaleString('th-TH')} | ${x.factory} | ${x.q} | พบ ${x.count}`).join('\n'):'ยังไม่มีประวัติ'}
-$('factory').onchange=loadData;$('search').onclick=search;$('q').onkeydown=e=>{if(e.key==='Enter')search()};renderHistory();loadFactories();
-</script></body></html>
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>ค้นหา ID MACHINE</title>
+<link rel="icon" type="image/png" href="icon.png">
+<link rel="apple-touch-icon" href="icon.png">
+<meta name="apple-mobile-web-app-title" content="EquipmentAA">
+<meta name="application-name" content="EquipmentAA">
+<meta name="theme-color" content="#000000">
+<script src="xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:#000;margin:0;padding:16px;display:flex;justify-content:center;align-items:flex-start;min-height:100vh;color:#fff}
+.container{background:#1c1c1e;padding:24px 20px;border-radius:24px;width:100%;max-width:360px;box-shadow:0 10px 30px rgba(0,0,0,.5);display:flex;flex-direction:column;align-items:center;position:relative;margin-top:18px}
+.header-area{display:flex;justify-content:center;align-items:center;width:100%;margin-bottom:20px;position:relative}
+.header-title{color:#fff;font-size:20px;font-weight:600;display:flex;align-items:center;gap:6px;text-align:center}
+.btn-history-trigger{position:absolute;left:0;background:transparent;border:none;font-size:22px;cursor:pointer;padding:0;display:flex;align-items:center}
+.btn-factory{position:absolute;right:0;background:#2f80ed;color:#fff;border:none;width:34px;height:34px;border-radius:50%;font-size:17px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(47,128,237,.35)}
+.factory-current{color:#2f80ed;font-size:12px;font-weight:700;margin-top:-12px;margin-bottom:12px;min-height:16px;text-align:center}
+.search-row{display:flex;margin-bottom:18px;align-items:center;width:100%;border-bottom:1px solid #2c2c2e;padding-bottom:8px}
+input{flex:1;background:transparent;border:none;color:#fff;font-size:18px;outline:none;width:100%;text-align:center}
+input::placeholder{color:#55555c}
+.btn-search{width:100%;background:#2f80ed;color:#fff;border:none;font-size:18px;font-weight:500;padding:12px;border-radius:12px;cursor:pointer;margin-bottom:18px;text-align:center}
+.status{font-size:14px;color:#ff453a;text-align:center;margin-bottom:10px;min-height:18px}
+.result-box{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;width:100%}
+.tags-inline{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;width:100%}
+.tag-gray{background:#242426;color:#fff;padding:6px 16px;border-radius:12px;font-size:15px;font-weight:bold;text-align:center}
+.tag-blue-container{background:#101a2d;padding:6px 18px;border-radius:12px;display:inline-flex;justify-content:center}
+.tag-blue-text{color:#2f80ed;font-size:16px;font-weight:bold;text-align:center}
+.bottom-line{width:100%;height:1px;background:#2c2c2e;margin-top:15px}
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.72);justify-content:center;align-items:center;z-index:1000;padding:16px}
+.modal-content{background:#1c1c1e;padding:20px;border-radius:20px;width:100%;max-width:340px;border:1px solid #2c2c2e;display:flex;flex-direction:column;gap:12px}
+.modal-title{color:#fff;font-size:17px;font-weight:600;text-align:center;margin-bottom:2px}
+.modal-subtitle{color:#2f80ed;font-size:14px;font-weight:bold;text-align:center}
+.factory-select{width:100%;background:#2c2c2e;color:#fff;border:1px solid #3a3a3c;border-radius:10px;padding:12px;font-size:16px;text-align:center;outline:none}
+.btn-primary{background:#2f80ed;color:#fff;border:none;padding:11px;border-radius:10px;font-weight:700;cursor:pointer}
+.btn-cancel{background:#3a3a3c;color:#fff;border:none;padding:10px;border-radius:8px;cursor:pointer}
+.history-date-picker{width:100%;background:#2c2c2e;border:1px solid #3a3a3c;border-radius:8px;padding:8px;color:#fff;font-size:14px;text-align:center;outline:none}
+.shift-tabs{display:flex;background:#2c2c2e;padding:2px;border-radius:8px;gap:2px}.shift-tab{flex:1;background:transparent;border:none;color:#8e8e93;padding:8px 0;font-size:12px;font-weight:500;border-radius:6px;cursor:pointer}.shift-tab.active{background:#101a2d;color:#2f80ed;font-weight:bold}
+.history-list{max-height:220px;overflow-y:auto;display:flex;flex-direction:column;gap:8px}.history-item{background:#2c2c2e;padding:10px 12px;border-radius:8px;display:flex;justify-content:space-between;align-items:center;cursor:pointer}.history-code{color:#fff;font-size:14px;font-weight:500}.history-time{color:#8e8e93;font-size:11px;text-align:right}
+@media(min-width:700px){.container{margin-top:38px}}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header-area">
+    <button class="btn-history-trigger" onclick="openHistoryModal()" aria-label="ประวัติ">🕒</button>
+    <div class="header-title">🔍 ค้นหา ID MACHINE</div>
+    <button class="btn-factory" onclick="openFactoryModal()" aria-label="เลือกโรงงาน" title="เลือกโรงงาน">🏭</button>
+  </div>
+  <div id="factoryCurrent" class="factory-current">กำลังโหลดโรงงาน...</div>
+  <div class="search-row">
+    <input id="machineCode" placeholder="EQPTZ2501071" enterkeyhint="search" autocomplete="off" onkeydown="if(event.key==='Enter') searchMachine()">
+  </div>
+  <button class="btn-search" onclick="searchMachine()">ค้นหา</button>
+  <div class="status" id="status"></div>
+  <div id="result" style="width:100%;"></div>
+</div>
+
+<div class="modal-overlay" id="factoryModal">
+  <div class="modal-content">
+    <div class="modal-title">🏭 เลือกโรงงาน</div>
+    <select id="factorySelect" class="factory-select"></select>
+    <button class="btn-primary" onclick="confirmFactory()">เลือกโรงงานนี้</button>
+    <button class="btn-cancel" onclick="closeModal('factoryModal')">ปิด</button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="historyModal">
+  <div class="modal-content">
+    <div class="modal-title">🕒 ประวัติการค้นหา</div>
+    <div class="modal-subtitle" id="historyCount">จำนวนทั้งหมด: 0 รายการ</div>
+    <input type="date" id="historyDate" class="history-date-picker" onchange="renderHistory()">
+    <div class="shift-tabs">
+      <button class="shift-tab active" id="tab-all" onclick="changeShift('all')">ทั้งหมด</button>
+      <button class="shift-tab" id="tab-day" onclick="changeShift('day')">เช้า</button>
+      <button class="shift-tab" id="tab-night" onclick="changeShift('night')">ดึก</button>
+    </div>
+    <div class="history-list" id="historyContainer"></div>
+    <button class="btn-cancel" onclick="closeModal('historyModal')">ปิดหน้าต่าง</button>
+  </div>
+</div>
+
+<script>
+let rows=[];
+let factories=[];
+let currentShift='all';
+const $=id=>document.getElementById(id);
+const clean=v=>String(v??'').replace(/[\s\u00A0]+/g,'').toUpperCase();
+const esc=v=>String(v??'').replace(/[&<>\"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c]));
+const factoryKey=f=>f.slug||String(f.db||'').replace(/^machines_/i,'').replace(/\.db$/i,'')||f.name;
+
+async function loadFactories(){
+  try{
+    const r=await fetch('factories.json?ts='+Date.now(),{cache:'no-store'});
+    if(!r.ok) throw new Error('โหลดรายชื่อโรงงานไม่สำเร็จ');
+    const j=await r.json();
+    factories=Array.isArray(j)?j:(j.factories||[]);
+  }catch(e){ factories=[]; $('factoryCurrent').textContent=e.message; }
+  if(!factories.length){ $('factoryCurrent').textContent='ยังไม่มีรายชื่อโรงงาน'; return; }
+  $('factorySelect').innerHTML=factories.map(f=>`<option value="${esc(factoryKey(f))}">${esc(f.name)}${f.version?' • v'+esc(f.version):''}</option>`).join('');
+  const saved=localStorage.getItem('eq_factory');
+  $('factorySelect').value=factories.some(f=>factoryKey(f)===saved)?saved:factoryKey(factories[0]);
+  await loadSelectedFactory();
+}
+
+function selectedFactory(){return factories.find(f=>factoryKey(f)===$('factorySelect').value)||factories[0]||{};}
+
+async function loadSelectedFactory(){
+  const f=selectedFactory();
+  const key=factoryKey(f);
+  if(!key)return;
+  localStorage.setItem('eq_factory',key);
+  $('factoryCurrent').textContent=`โรงงาน: ${f.name||key}${f.version?' • v'+f.version:''}`;
+  $('status').style.color='#8e8e93'; $('status').textContent='กำลังโหลดข้อมูล...'; rows=[]; $('result').innerHTML='';
+  const suffix=String(f.db||`machines_${key}.db`).replace(/^machines_/i,'').replace(/\.db$/i,'');
+  try{
+    const r=await fetch(`data_${encodeURIComponent(suffix)}.xlsx?ts=${Date.now()}`,{cache:'no-store'});
+    if(!r.ok) throw new Error('ยังไม่มีข้อมูลของโรงงานนี้');
+    const buf=await r.arrayBuffer();
+    const wb=XLSX.read(buf,{type:'array'});
+    const aoa=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,defval:''});
+    rows=aoa.slice(1).filter(x=>String(x[0]||'').trim()).map(x=>({id:x[0],model:x[1],no:x[2],department:x[3]}));
+    $('status').textContent='';
+  }catch(e){ $('status').style.color='#ff453a'; $('status').textContent=e.message||String(e); }
+}
+
+function searchMachine(){
+  const code=clean($('machineCode').value);
+  $('result').innerHTML=''; $('status').textContent='';
+  if(!code){$('status').style.color='#ff453a';$('status').textContent='กรุณากรอก ID MACHINE';return;}
+  const found=rows.filter(r=>clean(r.id)===code);
+  saveHistory(code,found.length,selectedFactory().name||factoryKey(selectedFactory()));
+  if(!found.length){$('status').style.color='#ff453a';$('status').textContent='ไม่พบข้อมูล';return;}
+  $('result').innerHTML=found.map(r=>`<div class="result-box"><div class="tags-inline"><div class="tag-gray">${esc(r.model)}</div><div class="tag-gray">${esc(r.no)}</div></div><div class="tag-blue-container"><div class="tag-blue-text">${esc(r.department)}</div></div><div class="bottom-line"></div></div>`).join('');
+}
+
+function openFactoryModal(){
+  const saved=localStorage.getItem('eq_factory'); if(saved)$('factorySelect').value=saved;
+  $('factoryModal').style.display='flex';
+}
+async function confirmFactory(){closeModal('factoryModal');await loadSelectedFactory();$('machineCode').focus();}
+function closeModal(id){$(id).style.display='none';}
+
+function saveHistory(code,count,factory){
+  const h=JSON.parse(localStorage.getItem('eq_machine_history')||'[]');
+  h.unshift({code,count,factory,time:Date.now()});
+  localStorage.setItem('eq_machine_history',JSON.stringify(h.filter(x=>Date.now()-x.time<48*60*60*1000).slice(0,150)));
+}
+function toDateInput(d){const x=new Date(d);return `${x.getFullYear()}-${String(x.getMonth()+1).padStart(2,'0')}-${String(x.getDate()).padStart(2,'0')}`;}
+function openHistoryModal(){if(!$('historyDate').value)$('historyDate').value=toDateInput(Date.now());renderHistory();$('historyModal').style.display='flex';}
+function changeShift(s){currentShift=s;['all','day','night'].forEach(x=>$('tab-'+x).classList.toggle('active',x===s));renderHistory();}
+function renderHistory(){
+  const target=$('historyDate').value;
+  let h=JSON.parse(localStorage.getItem('eq_machine_history')||'[]').filter(x=>Date.now()-x.time<48*60*60*1000);
+  h=h.filter(x=>toDateInput(x.time)===target);
+  if(currentShift!=='all')h=h.filter(x=>{const hr=new Date(x.time).getHours();return currentShift==='day'?(hr>=7&&hr<19):(hr<7||hr>=19)});
+  $('historyCount').textContent=`จำนวนทั้งหมด: ${h.length} รายการ`;
+  $('historyContainer').innerHTML=h.length?h.map(x=>`<div class="history-item" onclick="useHistory('${esc(x.code)}')"><div><div class="history-code">${esc(x.code)}</div><div style="color:#2f80ed;font-size:11px;margin-top:2px">${esc(x.factory||'')}</div></div><div class="history-time">${new Date(x.time).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'})}<br>พบ ${x.count}</div></div>`).join(''):'<div style="color:#8e8e93;text-align:center;padding:14px">ยังไม่มีประวัติ</div>';
+}
+function useHistory(code){$('machineCode').value=code;closeModal('historyModal');searchMachine();}
+window.onclick=e=>{if(e.target.classList.contains('modal-overlay'))e.target.style.display='none';};
+loadFactories();
+</script>
+</body>
+</html>
