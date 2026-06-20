@@ -1,7 +1,16 @@
 {
   "factories": [
-    { "name": "สระบุรี", "excel": "data_สระบุรี.xlsx" },
-    { "name": "โรจนะ", "excel": "data_โรจนะ.xlsx" },
-    { "name": "6000", "excel": "data_6000.xlsx" }
+    {
+      "name": "สระบุรี",
+      "excel": "data_สระบุรี.xlsx"
+    },
+    {
+      "name": "โรจนะ",
+      "excel": "data_โรจนะ.xlsx"
+    },
+    {
+      "name": "6000",
+      "excel": "data_6000.xlsx"
+    }
   ]
 }
